@@ -142,6 +142,26 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
 
+# Ionic / Angular / Capacitor
+www/
+dist/
+.angular/
+.sass-cache/
+.ionic/
+
+# Android (Capacitor)
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/app/release/
+*.apk
+*.aab
+*.keystore
+
+# Editor
+.vscode/
+.idea/
 # Astro generated types
 .astro/
 
