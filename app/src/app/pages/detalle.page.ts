@@ -20,10 +20,14 @@ import { ApiService, Evento } from '../services/api.service';
             <div class="fact-card"><span class="fact-label">Lugar</span><span class="fact-value">{{ evento.lugar }}</span></div>
           </section>
           @if (evento.desc) { <p class="detail-description">{{ evento.desc }}</p> }
-          @if (evento.lat != null && evento.lng != null) {
-            <iframe class="map-frame" [src]="mapa()" title="Mapa del lugar del evento"></iframe>
-          } @else if (evento.dir) {
-            <div class="map-placeholder"><span class="fact-label">Mapa del lugar</span><p>No se encontraron coordenadas para esta dirección. Edita el evento y agrega una dirección más completa para mostrar el mapa aquí.</p></div>
+          @if (evento.dir || (evento.lat != null && evento.lng != null)) {
+            <section class="event-map" aria-label="Mapa del lugar del evento">
+              <div class="event-map-heading">
+                <div><p class="eyebrow">Cómo llegar</p><h2 class="map-title">Mapa del lugar</h2></div>
+                @if (evento.dir) { <p class="map-address">{{ evento.dir }}</p> }
+              </div>
+              <iframe class="map-frame" [src]="mapa(evento)" title="Mapa del lugar del evento" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+            </section>
           }
         </article>
       }
@@ -33,10 +37,17 @@ import { ApiService, Evento } from '../services/api.service';
 export class DetallePage {
   e = signal<Evento | undefined>(undefined);
   constructor(r: ActivatedRoute, api: ApiService, private sanitizer: DomSanitizer) { api.evento(r.snapshot.paramMap.get('id')!).then(x => this.e.set(x)); }
-  mapa(): SafeResourceUrl {
-    const lat = this.e()!.lat!, lng = this.e()!.lng!;
-    const bbox = `${lng - 0.004},${lat - 0.004},${lng + 0.004},${lat + 0.004}`;
-    const url = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lng}`;
+  mapa(evento: Evento): SafeResourceUrl {
+    let url: string;
+    if (evento.lat != null && evento.lng != null) {
+      const lat = evento.lat, lng = evento.lng;
+      const bbox = `${lng - 0.004},${lat - 0.004},${lng + 0.004},${lat + 0.004}`;
+      url = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lng}`;
+    } else {
+      // Aún se puede mostrar la ubicación aproximada si el evento viejo no tiene coordenadas.
+      const consulta = [evento.dir, evento.lugar, 'Aguascalientes, México'].filter(Boolean).join(', ');
+      url = `https://www.google.com/maps?q=${encodeURIComponent(consulta)}&output=embed`;
+    }
     return this.sanitizer.bypassSecurityTrustResourceUrl(url);
   }
 }

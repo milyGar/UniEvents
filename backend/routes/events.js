@@ -15,11 +15,11 @@ const limpiar = b => Object.fromEntries(CAMPOS.filter(c => b[c] !== undefined).m
 
 async function buscarDirecciones(q, contexto) {
   if (!q) return [];
+  const calle = q.replace(/\b\d+[a-z]?\b/gi, ' ').replace(/\s+/g, ' ').trim();
+  const terminos = [calle || q, contexto, /aguascalientes/i.test(q) ? '' : 'Aguascalientes', /m[eé]xico/i.test(q) ? '' : 'México'].filter(Boolean);
+  const busqueda = [...new Set(terminos)].join(', ');
   try {
     // Los números de puerta suelen no existir en OSM; buscar la calle permite sugerir un punto cercano.
-    const calle = q.replace(/\b\d+[a-z]?\b/gi, ' ').replace(/\s+/g, ' ').trim();
-    const terminos = [calle || q, contexto, /aguascalientes/i.test(q) ? '' : 'Aguascalientes', /m[eé]xico/i.test(q) ? '' : 'México'].filter(Boolean);
-    const busqueda = [...new Set(terminos)].join(', ');
     const params = new URLSearchParams({ q: busqueda, limit: '8', lang: 'es', lat: '21.8818', lon: '-102.291' });
     const respuesta = await fetch(`https://photon.komoot.io/api/?${params}`, {
       headers: { 'User-Agent': 'UniEvents/1.0 (proyecto escolar)' },
@@ -35,11 +35,36 @@ async function buscarDirecciones(q, contexto) {
       return { id: `${p.osm_type || 'place'}-${p.osm_id || nombre}`, nombre, lat: +lat, lng: +lng };
     }).filter(x => x.nombre && Number.isFinite(x.lat) && Number.isFinite(x.lng));
   } catch (error) {
-    const e = new Error(error?.name === 'TimeoutError'
-      ? 'La búsqueda de direcciones agotó el tiempo de espera'
-      : `No se pudo consultar Photon: ${error?.message || 'error desconocido'}`);
-    e.status = 502;
-    throw e;
+    // Photon puede estar temporalmente fuera de servicio; intenta el geocodificador
+    // alternativo de OSM para que la búsqueda siga funcionando.
+    try {
+      const params = new URLSearchParams({
+        q: busqueda,
+        format: 'jsonv2',
+        limit: '8',
+        'accept-language': 'es',
+        countrycodes: 'mx',
+        viewbox: '-103.5,22.7,-101.0,21.0',
+        bounded: '1'
+      });
+      const respuesta = await fetch(`https://nominatim.openstreetmap.org/search?${params}`, {
+        headers: { 'User-Agent': 'UniEvents/1.0 (proyecto escolar)', 'Accept-Language': 'es' },
+        signal: AbortSignal.timeout(8000)
+      });
+      if (!respuesta.ok) throw new Error(`Nominatim respondió con HTTP ${respuesta.status}`);
+      const resultados = await respuesta.json();
+      if (!Array.isArray(resultados)) throw new Error('Nominatim devolvió una respuesta inválida');
+      return resultados.map(x => ({
+        id: `nominatim-${x.place_id}`,
+        nombre: x.display_name,
+        lat: +x.lat,
+        lng: +x.lon
+      })).filter(x => x.nombre && Number.isFinite(x.lat) && Number.isFinite(x.lng));
+    } catch (fallbackError) {
+      const e = new Error(`No se pudo buscar la dirección. Photon: ${error?.message || 'error desconocido'}. Nominatim: ${fallbackError?.message || 'error desconocido'}`);
+      e.status = 502;
+      throw e;
+    }
   }
 }
 const coordenadas = b => b.lat != null && b.lng != null ? { lat: +b.lat, lng: +b.lng } : null;

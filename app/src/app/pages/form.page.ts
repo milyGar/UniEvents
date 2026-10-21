@@ -72,8 +72,12 @@ export class FormPage {
       const response = await fetch(url, { headers: { Authorization: `Bearer ${this.api.token}` } });
       if (response.status === 401) throw new Error('Tu sesión venció. Cierra sesión y vuelve a entrar.');
       if (response.status === 404) throw new Error('El backend aún no tiene la búsqueda nueva. Reinícialo con Ctrl+C y npm start.');
-      if (!response.ok) throw new Error(`El servidor respondió con error ${response.status}.`);
-      const resultados: SugerenciaDireccion[] = await response.json();
+      const datos = await response.json().catch(() => null);
+      if (!response.ok) {
+        const detalle = typeof datos?.error === 'string' ? datos.error : '';
+        throw new Error(detalle || `El servidor respondió con error ${response.status}.`);
+      }
+      const resultados: SugerenciaDireccion[] = datos;
       if (solicitud !== this.solicitudBusqueda) return;
       this.sugerencias.set(resultados);
       if (!resultados.length) this.errorBusqueda.set('No encontramos coincidencias. Prueba con otro nombre o una calle cercana.');
