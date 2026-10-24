@@ -12,6 +12,13 @@ El repositorio contiene una aplicación móvil Ionic/Angular en `app/` y una API
 2. En otra terminal, entra a `app/`, ejecuta `npm install` y `npx ng serve --port 8100`.
 3. La app usa `http://localhost:3000/api` como URL del backend de desarrollo.
 
+### Despliegue del backend en Render
+
+1. Crea un servicio web conectado al repositorio y establece `backend` como directorio raíz. Usa `npm install` como comando de build y `npm start` como comando de inicio.
+2. Configura `MONGODB_URI`, `JWT_SECRET` y `CORS_ORIGIN` en las variables de entorno del servicio. `CORS_ORIGIN` debe contener los orígenes permitidos separados por comas.
+3. Para conectar una app desplegada, cambia `apiUrl` en `app/src/environments/environment.ts` a la URL del servicio seguida de `/api`.
+4. Comprueba que la API responde en la URL raíz del servicio; debe devolver `{ "ok": true }`.
+
 ### Integración de búsqueda geográfica
 
 El formulario consulta el endpoint autenticado `GET /api/events/buscar-direcciones` del backend. Este realiza una búsqueda de lugares con Photon, basada en OpenStreetMap, normaliza el GeoJSON a sugerencias con `nombre`, `lat` y `lng`, y aplica un timeout de 8 segundos. No se necesita una clave de Google. Si el servicio falla o devuelve datos inválidos, el endpoint responde `502`; una búsqueda válida sin resultados responde `200` con `[]`.
