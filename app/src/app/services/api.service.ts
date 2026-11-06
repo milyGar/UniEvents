@@ -11,7 +11,11 @@ export class ApiService {
   private base = environment.apiUrl;
   user: { nombre: string; correo: string; rol: string } | null = null;
   constructor(private http: HttpClient) {
-    const u = sessionStorage.getItem('user'); if (u) this.user = JSON.parse(u);
+    const u = sessionStorage.getItem('user');
+    if (u) {
+      try { this.user = JSON.parse(u); }
+      catch { sessionStorage.removeItem('user'); sessionStorage.removeItem('token'); }
+    }
   }
   get token() { return sessionStorage.getItem('token'); }
   get esAdmin() { return this.user?.rol === 'admin'; }
