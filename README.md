@@ -1,38 +1,89 @@
 # UniEvents
 
-Sistema para la gestión de eventos universitarios.
+UniEvents es una aplicación web móvil para consultar eventos universitarios. Los administradores pueden crear, modificar y eliminar eventos; los estudiantes pueden registrarse, iniciar sesión, buscar eventos y consultar sus detalles y ubicación.
 
-## Versionamiento
+> El código fuente de la app y la API está en la rama `feature/integracion-api`. Cambia a esa rama antes de ejecutar los comandos de instalación.
 
-Se utiliza Git para el historial de cambios y GitHub para almacenar el código y colaborar.
+## Requisitos
 
-### Repositorio
-Nombre del repositorio: `UniEvents`
+- Node.js 22.x y npm.
+- Una base de datos MongoDB accesible desde el backend. Para desplegar, puede usarse MongoDB Atlas.
+- GitHub para conectar el repositorio con Render.
 
-### Ramas
-- `main`: contiene la versión estable del proyecto.
-- `feature/*`: se utiliza para desarrollar nuevas funciones.
+## Tecnologías
 
-Ejemplo:
-- feature/login
-- feature/eventos
-- feature/perfil
+- Ionic y Angular 22 para la interfaz.
+- Capacitor 8 para preparar la aplicación móvil.
+- Node.js y Express para la API REST.
+- MongoDB y Mongoose para guardar usuarios y eventos.
+- JWT y bcryptjs para autenticación y contraseñas.
+- Photon y Nominatim para sugerencias/geocodificación de direcciones; OpenStreetMap para mostrar mapas.
 
-### Commits
-Se realizan al terminar una parte importante del proyecto, con mensajes claros:
+## Carpetas principales
 
-- `feat: agregar registro de estudiantes`
-- `feat: agregar consulta de eventos`
-- `fix: corregir inicio de sesión`
-- `docs: actualizar documentación`
+- `app/`: aplicación Ionic/Angular.
+- `backend/`: API REST, modelos, autenticación y operaciones de eventos.
 
-### Convenciones
-- Los nombres de las ramas serán claros.
-- Los commits describirán el cambio realizado.
-- Se evitarán mensajes poco descriptivos.
-- Antes de integrar cambios se comprobará que la aplicación siga funcionando.
+## Instalación y ejecución local
 
-### Estrategia de integración
-Cada integrante trabaja en una rama `feature` para desarrollar una función específica.
-Cuando la función está terminada, se integra a `main` después de comprobar que funciona correctamente.
-De esta manera se mantiene una versión estable del proyecto y un historial de los cambios realizados.
+### 1. Configurar y ejecutar la API
+
+Abre una terminal en la carpeta del proyecto:
+
+```powershell
+cd backend
+npm install
+Copy-Item .env.example .env
+```
+
+Edita `backend/.env` y configura:
+
+- `MONGODB_URI`: cadena de conexión de MongoDB.
+- `JWT_SECRET`: clave larga y privada para firmar sesiones.
+- `CORS_ORIGIN`: origen permitido de la aplicación; localmente, `http://localhost:8100`.
+- `ADMIN_EMAIL` y `ADMIN_PASS`: credenciales para crear la cuenta administradora.
+
+Después ejecuta:
+
+```powershell
+npm run seed
+npm start
+```
+
+La API escucha en `http://localhost:3000`. La ruta `/` responde `{"ok":true}`; las rutas de la API comienzan con `/api`.
+
+### 2. Ejecutar la aplicación
+
+Abre otra terminal:
+
+```powershell
+cd app
+npm ci
+npm start -- --port 8100
+```
+
+Abre `http://localhost:8100` en el navegador. En desarrollo, la aplicación consulta la API en `http://localhost:3000/api`.
+
+## Despliegue en Render
+
+El repositorio contiene dos servicios y se despliegan por separado:
+
+### API (Web Service)
+
+- Root Directory: `backend`
+- Build Command: `npm install`
+- Start Command: `npm start`
+- Variables de entorno: `MONGODB_URI`, `JWT_SECRET`, `CORS_ORIGIN`, `ADMIN_EMAIL` y `ADMIN_PASS`.
+
+Render asigna una URL HTTPS al servicio. La base de datos debe aceptar conexiones desde el servicio desplegado.
+
+### Aplicación (Static Site)
+
+- Root Directory: `app`
+- Build Command: `npm ci && npm run build`
+- Publish Directory: `www`
+- Rewrite: `/*` a `/index.html`, con acción **Rewrite**, para que funcionen las rutas de Angular al abrir un evento directamente.
+
+Antes de compilar producción, sustituye el valor de `apiUrl` en `app/src/environments/environment.prod.ts` por la URL HTTPS del backend seguida de `/api`. Configura `CORS_ORIGIN` en el servicio API con el dominio HTTPS de la aplicación.
+
+No subas `.env`, contraseñas, tokens ni cadenas de conexión al repositorio. Guarda esas variables en la configuración de Render.
