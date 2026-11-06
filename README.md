@@ -1,61 +1,87 @@
 # UniEvents
 
-Sistema para la gestión de eventos universitarios.
+UniEvents es una aplicación web móvil para consultar eventos universitarios. Los administradores pueden crear, modificar y eliminar eventos; los estudiantes pueden registrarse, iniciar sesión, buscar eventos y consultar sus detalles y ubicación.
 
-## Aplicación
+## Requisitos
 
-El repositorio contiene una aplicación móvil Ionic/Angular en `app/` y una API REST Node.js/Express en `backend/`, con MongoDB como base de datos.
+- Node.js 22.x y npm.
+- Una base de datos MongoDB accesible desde el backend. Para desplegar, puede usarse MongoDB Atlas.
+- GitHub para conectar el repositorio con Render.
 
-### Ejecución local
+## Tecnologías
 
-1. Configura el backend: entra a `backend/`, ejecuta `npm install`, copia `.env.example` como `.env` y define `MONGODB_URI` y `JWT_SECRET`. Después ejecuta `npm start` (API en `http://localhost:3000`). No agregues `.env` al repositorio.
-2. En otra terminal, entra a `app/`, ejecuta `npm install` y `npx ng serve --port 8100`.
-3. La app usa `http://localhost:3000/api` como URL del backend de desarrollo.
+- Ionic y Angular 22 para la interfaz.
+- Capacitor 8 para preparar la aplicación móvil.
+- Node.js y Express para la API REST.
+- MongoDB y Mongoose para guardar usuarios y eventos.
+- JWT y bcryptjs para autenticación y contraseñas.
+- Photon y Nominatim para sugerencias/geocodificación de direcciones; OpenStreetMap para mostrar mapas.
 
-### Despliegue del backend en Render
+## Carpetas principales
 
-1. Crea un servicio web conectado al repositorio y establece `backend` como directorio raíz. Usa `npm install` como comando de build y `npm start` como comando de inicio.
-2. Configura `MONGODB_URI`, `JWT_SECRET` y `CORS_ORIGIN` en las variables de entorno del servicio. `CORS_ORIGIN` debe contener los orígenes permitidos separados por comas.
-3. Para conectar una app desplegada, cambia `apiUrl` en `app/src/environments/environment.ts` a la URL del servicio seguida de `/api`.
-4. Comprueba que la API responde en la URL raíz del servicio; debe devolver `{ "ok": true }`.
+- `app/`: aplicación Ionic/Angular.
+- `backend/`: API REST, modelos, autenticación y operaciones de eventos.
 
-### Integración de búsqueda geográfica
+## Instalación y ejecución local
 
-El formulario consulta el endpoint autenticado `GET /api/events/buscar-direcciones` del backend. Este realiza una búsqueda de lugares con Photon, basada en OpenStreetMap, normaliza el GeoJSON a sugerencias con `nombre`, `lat` y `lng`, y aplica un timeout de 8 segundos. No se necesita una clave de Google. Si el servicio falla o devuelve datos inválidos, el endpoint responde `502`; una búsqueda válida sin resultados responde `200` con `[]`.
+### 1. Configurar y ejecutar la API
 
-El informe con el request, la estructura de respuesta y los casos de error está en [`docs/integracion-api.md`](docs/integracion-api.md).
+Abre una terminal en la carpeta del proyecto:
 
-## Versionamiento
+```powershell
+cd backend
+npm install
+Copy-Item .env.example .env
+```
 
-Se utiliza Git para el historial de cambios y GitHub para almacenar el código y colaborar.
+Edita `backend/.env` y configura:
 
-### Repositorio
-Nombre del repositorio: `UniEvents`
+- `MONGODB_URI`: cadena de conexión de MongoDB.
+- `JWT_SECRET`: clave larga y privada para firmar sesiones.
+- `CORS_ORIGIN`: origen permitido de la aplicación; localmente, `http://localhost:8100`.
+- `ADMIN_EMAIL` y `ADMIN_PASS`: credenciales para crear la cuenta administradora.
 
-### Ramas
-- `main`: contiene la versión estable del proyecto.
-- `feature/*`: se utiliza para desarrollar nuevas funciones.
+Después ejecuta:
 
-Ejemplo:
-- feature/login
-- feature/eventos
-- feature/perfil
+```powershell
+npm run seed
+npm start
+```
 
-### Commits
-Se realizan al terminar una parte importante del proyecto, con mensajes claros:
+La API escucha en `http://localhost:3000`. La ruta `/` responde `{"ok":true}`; las rutas de la API comienzan con `/api`.
 
-- `feat: agregar registro de estudiantes`
-- `feat: agregar consulta de eventos`
-- `fix: corregir inicio de sesión`
-- `docs: actualizar documentación`
+### 2. Ejecutar la aplicación
 
-### Convenciones
-- Los nombres de las ramas serán claros.
-- Los commits describirán el cambio realizado.
-- Se evitarán mensajes poco descriptivos.
-- Antes de integrar cambios se comprobará que la aplicación siga funcionando.
+Abre otra terminal:
 
-### Estrategia de integración
-Cada integrante trabaja en una rama `feature` para desarrollar una función específica.
-Cuando la función está terminada, se integra a `main` después de comprobar que funciona correctamente.
-De esta manera se mantiene una versión estable del proyecto y un historial de los cambios realizados.
+```powershell
+cd app
+npm ci
+npm start -- --port 8100
+```
+
+Abre `http://localhost:8100` en el navegador. En desarrollo, la aplicación consulta la API en `http://localhost:3000/api`.
+
+## Despliegue en Render
+
+El repositorio contiene dos servicios y se despliegan por separado:
+
+### API (Web Service)
+
+- Root Directory: `backend`
+- Build Command: `npm install`
+- Start Command: `npm start`
+- Variables de entorno: `MONGODB_URI`, `JWT_SECRET`, `CORS_ORIGIN`, `ADMIN_EMAIL` y `ADMIN_PASS`.
+
+Render asigna una URL HTTPS al servicio. La base de datos debe aceptar conexiones desde el servicio desplegado.
+
+### Aplicación (Static Site)
+
+- Root Directory: `app`
+- Build Command: `npm ci && npm run build`
+- Publish Directory: `www`
+- Rewrite: `/*` a `/index.html`, con acción **Rewrite**, para que funcionen las rutas de Angular al abrir un evento directamente.
+
+Antes de compilar producción, sustituye el valor de `apiUrl` en `app/src/environments/environment.prod.ts` por la URL HTTPS del backend seguida de `/api`. Configura `CORS_ORIGIN` en el servicio API con el dominio HTTPS de la aplicación.
+
+No subas `.env`, contraseñas, tokens ni cadenas de conexión al repositorio. Guarda esas variables en la configuración de Render.
