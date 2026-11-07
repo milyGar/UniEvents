@@ -1,4 +1,4 @@
-export const environment = {
+﻿export const environment = {
   production: true,
-  apiUrl: 'https://TU-API.onrender.com/api'
+  apiUrl: 'https://unieventss.onrender.com/api'
 };
